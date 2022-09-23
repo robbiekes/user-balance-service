@@ -1,0 +1,71 @@
+package httpserver
+
+import (
+	"context"
+	"net/http"
+	"time"
+)
+
+const (
+	defaultReadTimeout     = 5 * time.Second
+	defaultWriteTimeout    = 5 * time.Second
+	defaultAddr            = ":80"
+	defaultShutdownTimeout = 3 * time.Second
+)
+
+type Server struct {
+	server          *http.Server
+	notify          chan error
+	shutdownTimeout time.Duration
+}
+
+func New(handler http.Handler, opts ...Option) *Server {
+	httpServer := &http.Server{
+		Handler:      handler,
+		ReadTimeout:  defaultReadTimeout,
+		WriteTimeout: defaultWriteTimeout,
+		Addr:         defaultAddr,
+	}
+
+	s := &Server{
+		server:          httpServer,
+		notify:          make(chan error, 1),
+		shutdownTimeout: defaultShutdownTimeout,
+	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	s.start()
+
+	return s
+}
+
+func (s *Server) start() {
+	go func() {
+		s.notify <- s.server.ListenAndServe()
+		close(s.notify)
+	}()
+}
+
+func (s *Server) Notify() <-chan error {
+	return s.notify
+}
+
+func (s *Server) Shutdown() error {
+	ctx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
+	defer cancel()
+
+	return s.server.Shutdown(ctx)
+}
+
+// func (s *Server) Run(port string, v1 http.Handler) error {
+// 	s.server = &http.Server{
+// 		Addr:         ":" + port,
+// 		Handler:      v1,
+// 		ReadTimeout:  1 * time.Second,
+// 		WriteTimeout: 1 * time.Second,
+// 	}
+// 	return s.server.ListenAndServe()
+// }
