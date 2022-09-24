@@ -7,7 +7,7 @@
 #### CREATE
 > [auth/sign-up] --  Регистрация юзера (принимает username и password)[POST-запрос] 
 
-> [auth/sign-in] --  Авторизация юзера (хэдер basic auth(username, password) -> jwt-token) [POST-запрос]
+> [auth/sign-in] --  Авторизация юзера (хэдер "basic auth" (username, password) -> jwt-token) [POST-запрос]
 
 > [api/account/create] --  Создание аккаунта с балансом (баланс будет 0) [POST-запрос] 
 #### READ:
@@ -25,7 +25,7 @@
 #### DELETE:
 > [api/account/delete] -- Удаление аккаунта (принимает id) [DELETE-запрос] 
 
-##### Примечание: для работы с /api/account необходимо ввести в поле bearer token jwt-токен, сгенерированный при авторизации 
+##### Примечание: для работы с /api/account необходимо ввести в хэдер "bearer" токен, сгенерированный при авторизации 
 
 ## Дополнительные возможности:
 > [api/account/state?currency=] -- Конвертация баланса аккаунта с рубля на указанную валюту [GET-запрос]
