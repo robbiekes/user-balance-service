@@ -9,23 +9,23 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"user-balance-api/config"
-	"user-balance-api/internal/controller/http/v1"
-	"user-balance-api/internal/service"
-	"user-balance-api/internal/service/rediscache"
-	"user-balance-api/internal/service/repo"
-	"user-balance-api/internal/service/webapi"
-	"user-balance-api/pkg/httpserver"
-	"user-balance-api/pkg/postgres"
+	"user-balance-service/config"
+	v1 "user-balance-service/internal/controller/http/v1"
+	"user-balance-service/internal/service"
+	"user-balance-service/internal/service/repo"
+	"user-balance-service/internal/service/webapi"
+	"user-balance-service/pkg/httpserver"
+	"user-balance-service/pkg/postgres"
+	"user-balance-service/pkg/rediscache"
 )
 
 func Run(cfg *config.Config) {
 	// Cache
 	log.Info("Initializing Redis...")
-	redisCache := rediscache.NewRedisLib(redis.NewClient(&redis.Options{
-		Addr:     cfg.Addr,
-		Password: cfg.Password,
-		DB:       cfg.DB,
+	redisCache := rediscache.New(redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       cfg.Redis.DB,
 	}))
 
 	// Repository

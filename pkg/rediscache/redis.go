@@ -7,21 +7,27 @@ import (
 	"time"
 )
 
-const expire = 1 * time.Second
+const defaultExpire = 300 * time.Second
 
-type RedisLib struct {
+type Redis struct {
 	client *redis.Client
 	expire time.Duration
 }
 
-func NewRedisLib(client *redis.Client) *RedisLib {
-	return &RedisLib{
+func New(client *redis.Client, opts ...Option) *Redis {
+	r := &Redis{
 		client: client,
-		expire: expire,
+		expire: defaultExpire,
 	}
+
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	return r
 }
 
-func (r *RedisLib) Set(ctx context.Context, key string, value interface{}) error {
+func (r *Redis) Set(ctx context.Context, key string, value any) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -30,9 +36,8 @@ func (r *RedisLib) Set(ctx context.Context, key string, value interface{}) error
 	return nil
 }
 
-func (r *RedisLib) Get(ctx context.Context, key string) (interface{}, error) {
-	var err error
-	var value interface{}
+func (r *Redis) Get(ctx context.Context, key string) (any, error) {
+	var value any
 
 	result, err := r.client.Get(ctx, key).Result()
 	if err != nil {
@@ -42,5 +47,5 @@ func (r *RedisLib) Get(ctx context.Context, key string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &value, err
+	return &value, nil
 }

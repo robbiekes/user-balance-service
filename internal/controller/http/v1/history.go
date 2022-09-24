@@ -4,12 +4,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"strconv"
-	"user-balance-api/internal/entity"
-	"user-balance-api/internal/service"
-)
-
-const (
-	ALL_HISTORY_DATA = "all history"
+	"user-balance-service/internal/entity"
+	"user-balance-service/internal/service"
 )
 
 type historyRoutes struct {
@@ -24,39 +20,28 @@ func newHistoryRoutes(g *echo.Group, s service.History) {
 
 }
 
-type PaginationArgs struct {
-	Limit     int
-	Param     string
-	AccountId int
-}
-
-type SortArgs struct {
-	Type      string
-	AccountId int
-}
-
 func (h *historyRoutes) getAll(c echo.Context) error {
-	sort := c.FormValue("sort")
-
-	limit, _ := strconv.Atoi(c.FormValue("limit"))
-	pgn := PaginationArgs{
-		Limit:     limit,
-		Param:     c.FormValue("cursor"),
-		AccountId: 0,
-	}
-
-	srt := SortArgs{
-		Type:      sort,
-		AccountId: 0,
-	}
-
 	var records []entity.History
+	var limit int
 	var err error
 
+	sort := c.FormValue("sort")
+	param := c.FormValue("cursor")
+	limitCheckNum := c.FormValue("limit")
+	if len(limitCheckNum) == 0 {
+		limit = 0
+	} else {
+		limit, err = strconv.Atoi(c.FormValue("limit"))
+		if err != nil {
+			newErrorResponse(c, http.StatusBadRequest, "v1 - history - getAll - strconv.Atoi(c.FormValue())")
+			return err
+		}
+	}
+
 	if limit > 0 {
-		records, err = h.s.Pagination(c.Request().Context(), pgn)
+		records, err = h.s.Pagination(c.Request().Context(), limit, param, 0)
 	} else if len(sort) != 0 && (sort == "date" || sort == "amount") {
-		records, err = h.s.ShowSorted(c.Request().Context(), srt)
+		records, err = h.s.ShowSorted(c.Request().Context(), sort, 0)
 	} else {
 		records, err = h.s.ShowAll(c.Request().Context())
 	}
@@ -71,26 +56,32 @@ func (h *historyRoutes) getAll(c echo.Context) error {
 }
 
 func (h *historyRoutes) getById(c echo.Context) error {
-	accountId, _ := strconv.Atoi(c.Param("id"))
-	limit, _ := strconv.Atoi(c.FormValue("limit"))
-	pgn := PaginationArgs{
-		Limit:     limit,
-		Param:     c.FormValue("cursor"),
-		AccountId: accountId,
-	}
-
-	srt := SortArgs{
-		Type:      c.FormValue("sort"),
-		AccountId: accountId,
-	}
-
 	var records []entity.History
+	var limit int
 	var err error
 
+	sort := c.FormValue("sort")
+	param := c.FormValue("cursor")
+	accountId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		newErrorResponse(c, http.StatusBadRequest, "v1 - history - getById - strconv.Atoi(c.Param())")
+		return err
+	}
+	limitCheckNum := c.FormValue("limit")
+	if len(limitCheckNum) == 0 {
+		limit = 0
+	} else {
+		limit, err = strconv.Atoi(c.FormValue("limit"))
+		if err != nil {
+			newErrorResponse(c, http.StatusBadRequest, "v1 - history - getById - strconv.Atoi(c.FormValue())")
+			return err
+		}
+	}
+
 	if limit > 0 {
-		records, err = h.s.Pagination(c.Request().Context(), pgn)
-	} else if len(srt.Type) != 0 && (srt.Type == "date" || srt.Type == "amount") {
-		records, err = h.s.ShowSorted(c.Request().Context(), srt)
+		records, err = h.s.Pagination(c.Request().Context(), limit, param, accountId)
+	} else if len(sort) != 0 && (sort == "date" || sort == "amount") {
+		records, err = h.s.ShowSorted(c.Request().Context(), sort, accountId)
 	} else {
 		records, err = h.s.ShowById(c.Request().Context(), accountId)
 	}

@@ -5,8 +5,10 @@ services:
   redis:
     container_name: rediscache
     image: redis:alpine
+    command:
+      redis-server /usr/local/etc/redis.conf --requirepass qwerty
     volumes:
-      - ./rediscache.conf:/usr/local/etc/rediscache/rediscache.conf
+      - ./redis.conf:/usr/local/etc/redis.conf
     ports:
       - "6379:6379"
 

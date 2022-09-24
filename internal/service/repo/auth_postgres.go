@@ -3,8 +3,8 @@ package repo
 import (
 	"context"
 	"fmt"
-	"user-balance-api/internal/entity"
-	"user-balance-api/pkg/postgres"
+	"user-balance-service/internal/entity"
+	"user-balance-service/pkg/postgres"
 )
 
 type AuthRepo struct {

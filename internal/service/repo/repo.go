@@ -1,8 +1,8 @@
 package repo
 
 import (
-	"user-balance-api/internal/service/rediscache"
-	"user-balance-api/pkg/postgres"
+	"user-balance-service/pkg/postgres"
+	"user-balance-service/pkg/rediscache"
 )
 
 type Repository struct {
@@ -11,7 +11,7 @@ type Repository struct {
 	*HistoryRepo
 }
 
-func New(pg *postgres.Postgres, redisCache *rediscache.RedisLib) *Repository {
+func New(pg *postgres.Postgres, redisCache *rediscache.Redis) *Repository {
 	return &Repository{
 		AuthRepo:    NewAuthRepo(pg),
 		AccountRepo: NewAccountRepo(pg, redisCache),

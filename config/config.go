@@ -12,7 +12,7 @@ type (
 		Log       `yaml:"logger"`
 		PG        `yaml:"postgres"`
 		Converter `yaml:"converter"`
-		Redis     `yaml:"cache"`
+		Redis     `yaml:"redis"`
 	}
 
 	App struct {
@@ -39,7 +39,7 @@ type (
 
 	Redis struct {
 		Addr     string `env-required:"true" yaml:"addr" env:"REDIS_ADDRESS"`
-		Password string `env-required:"true" yaml:"password" env:"REDIS_PASSWORD"`
+		Password string `env-required:"true" env:"REDIS_PASSWORD"`
 		DB       int    `env-required:"true" yaml:"db" env:"REDIS_DB"`
 	}
 )

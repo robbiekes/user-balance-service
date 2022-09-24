@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt"
 	"time"
-	"user-balance-api/internal/entity"
+	"user-balance-service/internal/entity"
 )
 
 const (

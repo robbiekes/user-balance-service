@@ -15,6 +15,5 @@ converter:
   url: 'https://api.apilayer.com/exchangerates_data/convert'
 
 redis:
-  addr: 'localhost:6379'
-  password: ''
+  addr: 'rediscache:6379'
   db: 0

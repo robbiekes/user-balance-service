@@ -3,8 +3,8 @@ package v1
 import (
 	"github.com/labstack/echo/v4"
 	"net/http"
-	"user-balance-api/internal/entity"
-	"user-balance-api/internal/service"
+	"user-balance-service/internal/entity"
+	"user-balance-service/internal/service"
 )
 
 type authRoutes struct {

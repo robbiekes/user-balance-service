@@ -2,8 +2,8 @@ package main
 
 import (
 	log "github.com/sirupsen/logrus"
-	"user-balance-api/config"
-	"user-balance-api/internal/app"
+	"user-balance-service/config"
+	"user-balance-service/internal/app"
 )
 
 func main() {

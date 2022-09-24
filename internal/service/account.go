@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"user-balance-api/internal/entity"
+	"user-balance-service/internal/entity"
 )
 
 type AccountService struct {
@@ -43,8 +43,4 @@ func (s *AccountService) TransferMoney(ctx context.Context, idFrom, idTo, amount
 
 func (s *AccountService) ConvertToCurrency(ctx context.Context, currencyTo string, amount float64) (float64, error) {
 	return s.wapi.ConvertToCurrency(ctx, currencyTo, amount)
-}
-
-func (s *AccountService) AccountData(ctx context.Context, id int) (entity.Account, error) {
-	return s.repo.AccountData(ctx, id)
 }

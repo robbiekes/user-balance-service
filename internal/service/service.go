@@ -1,8 +1,8 @@
 package service
 
 import (
-	"user-balance-api/internal/service/repo"
-	"user-balance-api/internal/service/webapi"
+	"user-balance-service/internal/service/repo"
+	"user-balance-service/internal/service/webapi"
 )
 
 type Service struct {

@@ -1,4 +1,4 @@
-module user-balance-api
+module user-balance-service
 
 go 1.18
 

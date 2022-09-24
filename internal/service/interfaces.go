@@ -2,8 +2,7 @@ package service
 
 import (
 	"context"
-	v1 "user-balance-api/internal/controller/http/v1"
-	"user-balance-api/internal/entity"
+	"user-balance-service/internal/entity"
 )
 
 type (
@@ -17,7 +16,6 @@ type (
 		CreateAccount(ctx context.Context) (int, error)
 		WriteOff(ctx context.Context, id, amount int) error
 		GetAccount(ctx context.Context, id int) (entity.Account, error)
-		AccountData(ctx context.Context, id int) (entity.Account, error)
 		MakeDeposit(ctx context.Context, id, amount int) error
 		TransferMoney(ctx context.Context, idFrom, idTo, amount int) error
 		ConvertToCurrency(ctx context.Context, currencyTo string, amount float64) (float64, error)
@@ -27,8 +25,8 @@ type (
 	History interface {
 		ShowAll(ctx context.Context) ([]entity.History, error)
 		ShowById(ctx context.Context, id int) ([]entity.History, error)
-		ShowSorted(ctx context.Context, srt v1.SortArgs) ([]entity.History, error)
-		Pagination(ctx context.Context, args v1.PaginationArgs) ([]entity.History, error)
+		ShowSorted(ctx context.Context, sortType string, accountId int) ([]entity.History, error)
+		Pagination(ctx context.Context, limit int, param string, accountId int) ([]entity.History, error)
 		SaveHistory(ctx context.Context, input entity.History) (int, error)
 	}
 
@@ -41,7 +39,6 @@ type (
 		CreateAccount(ctx context.Context) (int, error)
 		WriteOff(ctx context.Context, id, amount int) error
 		GetAccount(ctx context.Context, id int) (entity.Account, error)
-		AccountData(ctx context.Context, id int) (entity.Account, error)
 		MakeDeposit(ctx context.Context, id, amount int) error
 		TransferMoney(ctx context.Context, idFrom, idTo, amount int) error
 		DeleteAccount(ctx context.Context, id int) error
@@ -50,14 +47,14 @@ type (
 	HistoryRepo interface {
 		ShowAll(ctx context.Context) ([]entity.History, error)
 		ShowById(ctx context.Context, id int) ([]entity.History, error)
-		ShowSorted(ctx context.Context, srt v1.SortArgs) ([]entity.History, error)
-		Pagination(ctx context.Context, args v1.PaginationArgs) ([]entity.History, error)
+		ShowSorted(ctx context.Context, sortType string, accountId int) ([]entity.History, error)
+		Pagination(ctx context.Context, limit int, param string, accountId int) ([]entity.History, error)
 		SaveHistory(ctx context.Context, input entity.History) (int, error)
 	}
 
 	RedisCache interface {
-		Set(ctx context.Context, key string, value interface{}) error
-		Get(ctx context.Context, key string) (string, error)
+		Set(ctx context.Context, key string, value any) error
+		Get(ctx context.Context, key string) (any, error)
 	}
 
 	ConverterWEBAPI interface {

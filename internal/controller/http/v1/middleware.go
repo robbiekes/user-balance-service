@@ -4,7 +4,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"strings"
-	"user-balance-api/internal/service"
+	"user-balance-service/internal/service"
 )
 
 const (

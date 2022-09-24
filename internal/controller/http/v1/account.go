@@ -4,15 +4,15 @@ import (
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"time"
-	"user-balance-api/internal/entity"
-	"user-balance-api/internal/service"
+	"user-balance-service/internal/entity"
+	"user-balance-service/internal/service"
 )
 
 const (
-	refill        = "пополнение счёта"
-	writeoff      = "снятие со счёта"
-	innertransfer = "иcходящий перевод"
-	outertransfer = "входящий перевод"
+	refillType        = "пополнение счёта"
+	writeoffType      = "снятие со счёта"
+	innertransferType = "иcходящий перевод"
+	outertransferType = "входящий перевод"
 )
 
 type accountRoutes struct {
@@ -69,7 +69,7 @@ func (r *accountRoutes) refillBalance(c echo.Context) error {
 	}
 
 	_, err = r.h.SaveHistory(c.Request().Context(), entity.History{
-		Type:        refill,
+		Type:        refillType,
 		Description: "",
 		Amount:      input.Balance,
 		AccountId:   input.Id,
@@ -102,7 +102,7 @@ func (r *accountRoutes) writeOffBalance(c echo.Context) error {
 	}
 
 	_, err = r.h.SaveHistory(c.Request().Context(), entity.History{
-		Type:        writeoff,
+		Type:        writeoffType,
 		Description: "",
 		Amount:      input.Balance,
 		AccountId:   input.Id,
@@ -141,7 +141,7 @@ func (r *accountRoutes) transferMoney(c echo.Context) error {
 	}
 
 	_, err = r.h.SaveHistory(c.Request().Context(), entity.History{
-		Type:        innertransfer,
+		Type:        innertransferType,
 		Description: "",
 		Amount:      transaction.Amount,
 		AccountId:   transaction.IdFrom,
@@ -153,7 +153,7 @@ func (r *accountRoutes) transferMoney(c echo.Context) error {
 	}
 
 	_, err = r.h.SaveHistory(c.Request().Context(), entity.History{
-		Type:        outertransfer,
+		Type:        outertransferType,
 		Description: "",
 		Amount:      transaction.Amount,
 		AccountId:   transaction.IdTo,

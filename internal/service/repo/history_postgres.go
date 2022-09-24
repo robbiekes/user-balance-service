@@ -3,45 +3,58 @@ package repo
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
-	v1 "user-balance-api/internal/controller/http/v1"
-	"user-balance-api/internal/entity"
-	"user-balance-api/internal/service/rediscache"
-	"user-balance-api/pkg/postgres"
+	"user-balance-service/internal/entity"
+	"user-balance-service/pkg/postgres"
+	"user-balance-service/pkg/rediscache"
 )
 
 const (
-	CURSORDEFAULT   = "1700-01-01"
-	MAXLIMIT        = 10
-	ALL_HISTORY     = "all"
-	ACCOUNT_HISTORY = "history of "
+	defaultPaginationCursor   = "1700-01-01"
+	maxPaginationLimit        = 10
+	allHistoryRedisKey        = "all_history_data"
+	historyByIdRedisKeyPrefix = "history_by_id"
 )
+
+func historyByIdRedisKey(id int) string {
+	return fmt.Sprintf("%s_%d", historyByIdRedisKeyPrefix, id)
+}
+
+func sortedHistoryRedisKey(sortType string, id int) string {
+	return fmt.Sprintf("%s_%d", sortType, id)
+}
+
+func paginationHistoryRedisKey(limit int, cursor string, id int) string {
+	return fmt.Sprintf("%d_%s_%d", limit, cursor, id)
+}
 
 type HistoryRepo struct {
 	*postgres.Postgres
-	*rediscache.RedisLib
+	*rediscache.Redis
 }
 
-func NewHistoryRepo(pg *postgres.Postgres, redisCache *rediscache.RedisLib) *HistoryRepo {
+func NewHistoryRepo(pg *postgres.Postgres, redisCache *rediscache.Redis) *HistoryRepo {
 	return &HistoryRepo{
 		Postgres: pg,
-		RedisLib: redisCache,
+		Redis:    redisCache,
 	}
 }
 
 func (h *HistoryRepo) ShowAll(ctx context.Context) ([]entity.History, error) {
-	// pull out from cache
-	value, err := h.RedisLib.Get(ctx, ALL_HISTORY)
+	// search in cache
+	value, err := h.Redis.Get(ctx, allHistoryRedisKey)
 	if value != nil {
 		accounts, ok := value.([]entity.History)
 		if ok {
-			return accounts, fmt.Errorf("repo - HistoryRepo - ShowAll - h.RedisLib.Get: %w", err)
+			return accounts, nil
 		}
-		return nil, err
 	}
+	// if err != nil {
+	// 	return nil, fmt.Errorf("repo - HistoryRepo - ShowAll - h.Redis.Get: %w", err)
+	// }
 
-	// pull out from db
+	// do request
+	var accounts []entity.History
 	sql, args, err := h.Builder.
 		Select("id", "type", "description", "amount", "account_id", "date").
 		From("history").
@@ -51,7 +64,6 @@ func (h *HistoryRepo) ShowAll(ctx context.Context) ([]entity.History, error) {
 		return nil, fmt.Errorf("repo - HistoryRepo - ShowAll - a.Builder: %w", err)
 	}
 
-	var accounts []entity.History
 	rows, err := h.Pool.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("repo - HistoryRepo - ShowAll - a.Pool.Query: %w", err)
@@ -66,31 +78,30 @@ func (h *HistoryRepo) ShowAll(ctx context.Context) ([]entity.History, error) {
 		accounts = append(accounts, account)
 	}
 
-	// put in cache
-	err = h.RedisLib.Set(ctx, ALL_HISTORY, accounts)
+	// save in cache
+	err = h.Redis.Set(ctx, allHistoryRedisKey, accounts)
 	if err != nil {
-		return nil, fmt.Errorf("repo - HistoryRepo - ShowAll - h.RedisLib.Set: %w", err)
+		return nil, fmt.Errorf("repo - HistoryRepo - ShowAll - h.Redis.Set: %w", err)
 	}
 
 	return accounts, nil
 }
 
 func (h *HistoryRepo) ShowById(ctx context.Context, id int) ([]entity.History, error) {
-	// pull out from cache
-	accountId := strconv.Itoa(id)
-	value, err := h.RedisLib.Get(ctx, ALL_HISTORY+" "+accountId)
+	// search in cache
+	value, err := h.Redis.Get(ctx, accountRedisKey(id))
 	if value != nil {
 		accounts, ok := value.([]entity.History)
 		if ok {
-			return accounts, fmt.Errorf("repo - HistoryRepo - ShowById - value.([]entity.History): %w", err)
+			return accounts, nil
 		}
-		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("repo - HistoryRepo - ShowById - h.RedisLib.Get: %w", err)
-	}
+	// if err != nil {
+	// 	return nil, fmt.Errorf("repo - HistoryRepo - ShowById - h.Redis.Get: %w", err)
+	// }
 
-	// pull out from db
+	// do request
+	var accounts []entity.History
 	sql, args, err := h.Builder.
 		Select("id", "type", "description", "amount", "account_id", "date").
 		From("history").
@@ -101,7 +112,6 @@ func (h *HistoryRepo) ShowById(ctx context.Context, id int) ([]entity.History, e
 		return nil, fmt.Errorf("repo - HistoryRepo - ShowById - a.Builder: %w", err)
 	}
 
-	var accounts []entity.History
 	rows, err := h.Pool.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("repo - HistoryRepo - ShowById - a.Pool.Query: %w", err)
@@ -116,49 +126,47 @@ func (h *HistoryRepo) ShowById(ctx context.Context, id int) ([]entity.History, e
 		accounts = append(accounts, account)
 	}
 
-	// put in cache
-	err = h.RedisLib.Set(ctx, ALL_HISTORY+" "+accountId, accounts)
+	// save in cache
+	err = h.Redis.Set(ctx, historyByIdRedisKey(id), accounts)
 	if err != nil {
-		return nil, fmt.Errorf("repo - HistoryRepo - ShowAll - h.RedisLib.Set: %w", err)
+		return nil, fmt.Errorf("repo - HistoryRepo - ShowAll - h.Redis.Set: %w", err)
 	}
 
 	return accounts, nil
 }
 
-func (h *HistoryRepo) ShowSorted(ctx context.Context, srt v1.SortArgs) ([]entity.History, error) {
+func (h *HistoryRepo) ShowSorted(ctx context.Context, sortType string, accountId int) ([]entity.History, error) {
 	var (
 		sql  string
 		args []interface{}
 		err  error
 	)
 
-	// pull out from cache
-	accountId := strconv.Itoa(srt.AccountId)
-	value, err := h.RedisLib.Get(ctx, srt.Type+" "+accountId)
+	// search in cache
+	value, err := h.Redis.Get(ctx, sortedHistoryRedisKey(sortType, accountId))
 	if value != nil {
 		accounts, ok := value.([]entity.History)
 		if ok {
 			return accounts, nil
 		}
-		return nil, fmt.Errorf("repo - HistoryRepo - ShowSorted - value.([]entity.History): %w", err)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("repo - HistoryRepo - ShowSorted - h.RedisLib.Get: %w", err)
-	}
+	// if err != nil {
+	// 	return nil, fmt.Errorf("repo - HistoryRepo - ShowSorted - h.Redis.Get: %w", err)
+	// }
 
-	// pull out from db
+	// do request
 	switch {
-	case srt.AccountId == 0:
+	case accountId == 0:
 		sql, args, err = h.Builder.
 			Select("id", "type", "description", "amount", "account_id", "date").
-			From("history").OrderBy(srt.Type).
+			From("history").OrderBy(sortType).
 			ToSql()
-	case srt.AccountId != 0:
+	case accountId != 0:
 		sql, args, err = h.Builder.
 			Select("id", "type", "description", "amount", "account_id", "date").
 			From("history").
-			Where("account_id = ?", srt.AccountId).
-			OrderBy(srt.Type).
+			Where("account_id = ?", accountId).
+			OrderBy(sortType).
 			ToSql()
 	}
 	if err != nil {
@@ -180,10 +188,10 @@ func (h *HistoryRepo) ShowSorted(ctx context.Context, srt v1.SortArgs) ([]entity
 		accounts = append(accounts, account)
 	}
 
-	// put in cache
-	err = h.RedisLib.Set(ctx, srt.Type+" "+accountId, accounts)
+	// save in cache
+	err = h.Redis.Set(ctx, sortedHistoryRedisKey(sortType, accountId), accounts)
 	if err != nil {
-		return nil, fmt.Errorf("repo - HistoryRepo - ShowAll - h.RedisLib.Set: %w", err)
+		return nil, fmt.Errorf("repo - HistoryRepo - ShowSorted - h.Redis.Set: %w", err)
 	}
 
 	return accounts, nil
@@ -209,59 +217,55 @@ func (h *HistoryRepo) SaveHistory(ctx context.Context, input entity.History) (in
 	return id, nil
 }
 
-func (h *HistoryRepo) Pagination(ctx context.Context, pgn v1.PaginationArgs) ([]entity.History, error) {
+func (h *HistoryRepo) Pagination(ctx context.Context, limit int, param string, accountId int) ([]entity.History, error) {
 	var (
 		cursor string
 		sql    string
 		args   []interface{}
-		err    error
 	)
 
-	// pull out from cache
-	accountId := strconv.Itoa(pgn.AccountId)
-	limit := strconv.Itoa(pgn.Limit)
-	value, err := h.RedisLib.Get(ctx, limit+" "+pgn.Param+" "+accountId)
+	// correct parameters
+	switch {
+	case len(param) == 0:
+		cursor = defaultPaginationCursor
+	case len(param) != 0:
+		cursor = param
+	}
+	switch {
+	case limit > maxPaginationLimit:
+		limit = maxPaginationLimit
+	}
+
+	// search in cache
+	value, err := h.Redis.Get(ctx, paginationHistoryRedisKey(limit, cursor, accountId))
 	if value != nil {
 		accounts, ok := value.([]entity.History)
 		if ok {
 			return accounts, nil
 		}
-		return nil, fmt.Errorf("repo - HistoryRepo - ShowSorted - value.([]entity.History): %w", err)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("repo - HistoryRepo - ShowSorted - h.RedisLib.Get: %w", err)
-	}
-
-	// correct parameters
-	switch {
-	case len(pgn.Param) == 0:
-		cursor = CURSORDEFAULT
-	case len(pgn.Param) != 0:
-		cursor = pgn.Param
-	}
-	switch {
-	case pgn.Limit > MAXLIMIT:
-		pgn.Limit = MAXLIMIT
-	}
+	// if err != nil {
+	// 	return nil, fmt.Errorf("repo - HistoryRepo - Pagination - h.Redis.Get: %w", err)
+	// }
 
 	// do request
 	switch {
-	case pgn.AccountId == 0:
+	case accountId == 0:
 		sql, args, err = h.Builder.
 			Select("id", "type", "description", "amount", "account_id", "date").
 			From("history").
 			Where("date > ?", cursor).
 			OrderBy("date DESC").
-			Limit(uint64(pgn.Limit)).
+			Limit(uint64(limit)).
 			ToSql()
-	case pgn.AccountId != 0:
+	case accountId != 0:
 		sql, args, err = h.Builder.
 			Select("id", "type", "description", "amount", "account_id", "date").
 			From("history").
-			Where("account_id = ?", pgn.AccountId).
+			Where("account_id = ?", accountId).
 			Where("date > ?", cursor).
 			OrderBy("date DESC").
-			Limit(uint64(pgn.Limit)).
+			Limit(uint64(limit)).
 			ToSql()
 	}
 
@@ -284,10 +288,10 @@ func (h *HistoryRepo) Pagination(ctx context.Context, pgn v1.PaginationArgs) ([]
 		accounts = append(accounts, account)
 	}
 
-	// put in cache
-	err = h.RedisLib.Set(ctx, limit+" "+pgn.Param+" "+accountId, accounts)
+	// save in cache
+	err = h.Redis.Set(ctx, paginationHistoryRedisKey(limit, cursor, accountId), accounts)
 	if err != nil {
-		return nil, fmt.Errorf("repo - HistoryRepo - ShowAll - h.RedisLib.Set: %w", err)
+		return nil, fmt.Errorf("repo - HistoryRepo - Pagination - h.Redis.Set: %w", err)
 	}
 
 	return accounts, nil

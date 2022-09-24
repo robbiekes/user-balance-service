@@ -2,8 +2,7 @@ package service
 
 import (
 	"context"
-	v1 "user-balance-api/internal/controller/http/v1"
-	"user-balance-api/internal/entity"
+	"user-balance-service/internal/entity"
 )
 
 type HistoryService struct {
@@ -22,14 +21,14 @@ func (h *HistoryService) ShowById(ctx context.Context, id int) ([]entity.History
 	return h.repo.ShowById(ctx, id)
 }
 
-func (h *HistoryService) ShowSorted(ctx context.Context, srt v1.SortArgs) ([]entity.History, error) {
-	return h.repo.ShowSorted(ctx, srt)
+func (h *HistoryService) ShowSorted(ctx context.Context, sortType string, accountId int) ([]entity.History, error) {
+	return h.repo.ShowSorted(ctx, sortType, accountId)
 }
 
 func (h *HistoryService) SaveHistory(ctx context.Context, input entity.History) (int, error) {
 	return h.repo.SaveHistory(ctx, input)
 }
 
-func (h *HistoryService) Pagination(ctx context.Context, args v1.PaginationArgs) ([]entity.History, error) {
-	return h.repo.Pagination(ctx, args)
+func (h *HistoryService) Pagination(ctx context.Context, limit int, param string, accountId int) ([]entity.History, error) {
+	return h.repo.Pagination(ctx, limit, param, accountId)
 }
