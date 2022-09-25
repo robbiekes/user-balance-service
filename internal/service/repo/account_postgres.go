@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Masterminds/squirrel"
+	"github.com/mitchellh/mapstructure"
 	"user-balance-service/internal/entity"
 	"user-balance-service/pkg/postgres"
 	"user-balance-service/pkg/rediscache"
@@ -108,19 +109,21 @@ func (a *AccountRepo) WriteOff(ctx context.Context, id, amount int) error {
 }
 
 func (a *AccountRepo) GetAccount(ctx context.Context, id int) (entity.Account, error) {
-	// check in cache
+	var account entity.Account
+
+	// search in cache
 	value, err := a.Redis.Get(ctx, accountRedisKey(id))
-	if value != nil {
-		account, ok := value.(entity.Account)
-		if ok {
-			return account, nil
+	if value != nil && err == nil {
+		err := mapstructure.Decode(value.(map[string]interface{}), &account)
+		if err != nil {
+			return entity.Account{}, fmt.Errorf("repo - AccountRepo - GetAccount - mapstructure.Decode: %w", err)
 		}
+		return account, nil
 	}
 
 	// do request
-	var account entity.Account
 	sql, args, err := a.Builder.
-		Select("balance").
+		Select("id, balance").
 		From("accounts").
 		Where("id = ?", id).
 		ToSql()
@@ -129,7 +132,7 @@ func (a *AccountRepo) GetAccount(ctx context.Context, id int) (entity.Account, e
 		return entity.Account{}, fmt.Errorf("repo - AccountRepo - GetAccount - a.Builder: %w", err)
 	}
 
-	err = a.Pool.QueryRow(ctx, sql, args...).Scan(&account.Balance)
+	err = a.Pool.QueryRow(ctx, sql, args...).Scan(&account.Id, &account.Balance)
 	if err != nil {
 		return entity.Account{}, fmt.Errorf("repo - AccountRepo - GetAccount - a.Pool.QueryRow: %w", err)
 	}

@@ -32,6 +32,7 @@ func (r *Redis) Set(ctx context.Context, key string, value any) error {
 	if err != nil {
 		return err
 	}
+
 	r.client.Set(ctx, key, data, r.expire)
 	return nil
 }
@@ -43,9 +44,11 @@ func (r *Redis) Get(ctx context.Context, key string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	err = json.Unmarshal([]byte(result), &value)
 	if err != nil {
 		return nil, err
 	}
-	return &value, nil
+
+	return value, nil
 }

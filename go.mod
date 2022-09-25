@@ -34,6 +34,7 @@ require (
 	github.com/lib/pq v1.10.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.1 // indirect
 	go.uber.org/atomic v1.7.0 // indirect

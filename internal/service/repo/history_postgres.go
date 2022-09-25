@@ -3,6 +3,8 @@ package repo
 import (
 	"context"
 	"fmt"
+	"github.com/mitchellh/mapstructure"
+	"reflect"
 	"time"
 	"user-balance-service/internal/entity"
 	"user-balance-service/pkg/postgres"
@@ -41,20 +43,16 @@ func NewHistoryRepo(pg *postgres.Postgres, redisCache *rediscache.Redis) *Histor
 }
 
 func (h *HistoryRepo) ShowAll(ctx context.Context) ([]entity.History, error) {
+	var accounts []entity.History
+	var err error
+
 	// search in cache
 	value, err := h.Redis.Get(ctx, allHistoryRedisKey)
-	if value != nil {
-		accounts, ok := value.([]entity.History)
-		if ok {
-			return accounts, nil
-		}
+	if value != nil && err == nil {
+		return extractHistorySliceFromTypeAny(value, accounts)
 	}
-	// if err != nil {
-	// 	return nil, fmt.Errorf("repo - HistoryRepo - ShowAll - h.Redis.Get: %w", err)
-	// }
 
 	// do request
-	var accounts []entity.History
 	sql, args, err := h.Builder.
 		Select("id", "type", "description", "amount", "account_id", "date").
 		From("history").
@@ -88,20 +86,15 @@ func (h *HistoryRepo) ShowAll(ctx context.Context) ([]entity.History, error) {
 }
 
 func (h *HistoryRepo) ShowById(ctx context.Context, id int) ([]entity.History, error) {
+	var accounts []entity.History
+
 	// search in cache
-	value, err := h.Redis.Get(ctx, accountRedisKey(id))
-	if value != nil {
-		accounts, ok := value.([]entity.History)
-		if ok {
-			return accounts, nil
-		}
+	value, err := h.Redis.Get(ctx, historyByIdRedisKey(id))
+	if value != nil && err == nil {
+		return extractHistorySliceFromTypeAny(value, accounts)
 	}
-	// if err != nil {
-	// 	return nil, fmt.Errorf("repo - HistoryRepo - ShowById - h.Redis.Get: %w", err)
-	// }
 
 	// do request
-	var accounts []entity.History
 	sql, args, err := h.Builder.
 		Select("id", "type", "description", "amount", "account_id", "date").
 		From("history").
@@ -295,4 +288,35 @@ func (h *HistoryRepo) Pagination(ctx context.Context, limit int, param string, a
 	}
 
 	return accounts, nil
+}
+
+func extractHistorySliceFromTypeAny(value any, accounts []entity.History) ([]entity.History, error) {
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: StringToCustomTimeHookFunc("2006-01-02"),
+		Result:     &accounts,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("repo - AccountRepo - GetAccount - mapstructure.NewDecoder: %w", err)
+	}
+	err = decoder.Decode(value)
+	return accounts, err
+}
+
+func StringToCustomTimeHookFunc(layout string) mapstructure.DecodeHookFunc {
+	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+		if f.Kind() != reflect.String {
+			return data, nil
+		}
+		if t != reflect.TypeOf(entity.CustomTime{}) {
+			return data, nil
+		}
+
+		// Convert it by parsing
+		rawtime, err := time.Parse(layout, data.(string))
+		if err != nil {
+			return nil, err
+		}
+		ct := entity.CustomTime(rawtime)
+		return ct, nil
+	}
 }
