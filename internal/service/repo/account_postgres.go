@@ -207,7 +207,7 @@ func (a *AccountRepo) TransferMoney(ctx context.Context, idFrom, idTo, amount in
 
 	_, err = a.Pool.Exec(ctx, sql, args...)
 	if err != nil {
-		tx.Rollback(ctx)
+		_ = tx.Rollback(ctx)
 		return fmt.Errorf("repo - AccountRepo - TransferMoney - a.Pool.Exec: %w", err)
 	}
 
@@ -223,11 +223,11 @@ func (a *AccountRepo) TransferMoney(ctx context.Context, idFrom, idTo, amount in
 
 	_, err = a.Pool.Exec(ctx, sql, args...)
 	if err != nil {
-		tx.Rollback(ctx)
+		_ = tx.Rollback(ctx)
 		return fmt.Errorf("repo - AccountRepo - TransferMoney - a.Pool.Exec: %w", err)
 	}
 
-	tx.Commit(ctx)
+	_ = tx.Commit(ctx)
 
 	// save changes in cache
 	accountFrom.Balance -= amount

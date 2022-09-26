@@ -9,17 +9,18 @@ import (
 	"io/ioutil"
 	"net/http"
 	url "net/url"
-	"os"
 )
 
 const rubles = "RUB"
 
 type ConverterAPI struct {
 	client *http.Client
+	url    string
+	apikey string
 }
 
-func NewConverterAPI(client *http.Client) *ConverterAPI {
-	return &ConverterAPI{client}
+func NewConverterAPI(client *http.Client, url, apikey string) *ConverterAPI {
+	return &ConverterAPI{client, url, apikey}
 }
 
 type responseHTTP struct {
@@ -27,10 +28,8 @@ type responseHTTP struct {
 }
 
 func (c *ConverterAPI) ConvertToCurrency(ctx context.Context, currency string, amount float64) (float64, error) {
-	converterUrl := os.Getenv("CONVERTER_URL")
-
-	req, err := http.NewRequestWithContext(ctx, "GET", converterUrl, nil)
-	req.Header.Set("apikey", os.Getenv("CONVERTER_API_KEY"))
+	req, err := http.NewRequestWithContext(ctx, "GET", c.url, nil)
+	req.Header.Set("apikey", c.apikey)
 
 	// add parameters
 	req.URL.RawQuery = url.Values{

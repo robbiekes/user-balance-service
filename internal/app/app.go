@@ -24,7 +24,7 @@ func Run(cfg *config.Config) {
 	log.Info("Initializing Redis...")
 	redisCache := rediscache.New(redis.NewClient(&redis.Options{
 		Addr:     cfg.Redis.Addr,
-		Password: os.Getenv("REDIS_PASSWORD"),
+		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	}))
 
@@ -38,7 +38,7 @@ func Run(cfg *config.Config) {
 
 	// Web API
 	log.Info("Initializing webapi...")
-	converterWebApi := webapi.NewConverterAPI(http.DefaultClient)
+	converterWebApi := webapi.NewConverterAPI(http.DefaultClient, cfg.Converter.URL, cfg.Converter.ApiKey)
 
 	// Service
 	log.Info("Initializing service...")

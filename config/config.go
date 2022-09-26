@@ -34,13 +34,14 @@ type (
 	}
 
 	Converter struct {
-		URL string `env-required:"true" yaml:"url" env:"CONVERTER_URL"`
+		URL    string `env-required:"true" yaml:"url" env:"CONVERTER_URL"`
+		ApiKey string `env-required:"true"            env:"CONVERTER_API_KEY"`
 	}
 
 	Redis struct {
 		Addr     string `env-required:"true" yaml:"addr" env:"REDIS_ADDRESS"`
-		Password string `env-required:"true" env:"REDIS_PASSWORD"`
-		DB       int    `env-required:"true" yaml:"db" env:"REDIS_DB"`
+		Password string `env-required:"true"             env:"REDIS_PASSWORD"`
+		DB       int    `env-required:"true" yaml:"db"   env:"REDIS_DB"`
 	}
 )
 
