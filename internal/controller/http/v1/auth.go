@@ -22,7 +22,8 @@ func newAuthRoutes(g *echo.Group, s service.Auth) {
 func (r *authRoutes) signUp(c echo.Context) error {
 	var input entity.User
 
-	if err := c.Bind(&input); err != nil {
+	err := c.Bind(&input)
+	if err != nil {
 		newErrorResponse(c, http.StatusBadRequest, err.Error())
 		return err
 	}

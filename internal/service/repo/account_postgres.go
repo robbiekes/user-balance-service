@@ -80,22 +80,22 @@ func (a *AccountRepo) WriteOff(ctx context.Context, id, amount int) error {
 		return fmt.Errorf("repo - AccountRepo - WriteOff - a.GetAccount: %w", err)
 	}
 
-	if account.Balance-amount >= 0 {
-		sql, args, err := a.Builder.
-			Update("accounts").
-			Set("balance", squirrel.Expr("balance - ?", amount)).
-			Where("id = ?", id).
-			ToSql()
-		if err != nil {
-			return fmt.Errorf("repo - AccountRepo - WriteOff - a.Builder: %w", err)
-		}
-
-		_, err = a.Pool.Exec(ctx, sql, args...)
-		if err != nil {
-			return fmt.Errorf("repo - AccountRepo - WriteOff - a.Pool.Exec: %w", err)
-		}
-	} else {
+	if account.Balance-amount < 0 {
 		return fmt.Errorf("repo - AccountRepo - WriteOff - balance can't be less than 0")
+	}
+
+	sql, args, err := a.Builder.
+		Update("accounts").
+		Set("balance", squirrel.Expr("balance - ?", amount)).
+		Where("id = ?", id).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("repo - AccountRepo - WriteOff - a.Builder: %w", err)
+	}
+
+	_, err = a.Pool.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("repo - AccountRepo - WriteOff - a.Pool.Exec: %w", err)
 	}
 
 	// save changes in cache
@@ -140,7 +140,7 @@ func (a *AccountRepo) GetAccount(ctx context.Context, id int) (entity.Account, e
 	// save in cache
 	err = a.Redis.Set(ctx, accountRedisKey(id), account)
 	if err != nil {
-		return entity.Account{}, err
+		return entity.Account{}, fmt.Errorf("repo - AccountRepo - GetAccount - a.Redis.Set: %w", err)
 	}
 
 	return account, nil
@@ -176,7 +176,12 @@ func (a *AccountRepo) MakeDeposit(ctx context.Context, id, amount int) error {
 	return nil
 }
 
+// TransferMoney TODO: check if amount > 0
 func (a *AccountRepo) TransferMoney(ctx context.Context, idFrom, idTo, amount int) error {
+	if amount <= 0 {
+		return errors.New("repo - AccountRepo - TransferMoney - amount can't be 0 or less than 0")
+	}
+
 	accountFrom, err := a.GetAccount(ctx, idFrom)
 	if err != nil {
 		return err

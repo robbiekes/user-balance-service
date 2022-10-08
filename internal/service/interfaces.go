@@ -5,6 +5,8 @@ import (
 	"user-balance-service/internal/entity"
 )
 
+//go:generate mockgen -source=interfaces.go -destination=mock/mock.go
+
 type (
 	Auth interface {
 		CreateUser(context.Context, entity.User) (int, error)
